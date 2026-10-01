@@ -8,7 +8,7 @@ export function Footer() {
       <DrawablyDivider className="mb-4" width={1.5} />
       <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-ink-3">
         <p className="font-pen text-lg">
-          drawn &amp; developed by <span className="text-ink">Harsh</span>
+          drawn &amp; developed by <span className="text-ink">Khushal</span>
         </p>
         <p>{new Date().getFullYear()} &copy; all rights reserved.</p>
       </div>

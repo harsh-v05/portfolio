@@ -12,8 +12,8 @@ import {
   DrawablyUnderline,
 } from "./drawably";
 
-const RESUME_URL = "/Harsh_Vaghamshi_AI_Developer.pdf";
-const EMAIL = "mailto:vaghamshiharsh5@gmail.com";
+const RESUME_URL = "/Khushal_Vaghamshi_AI_Developer.pdf";
+const EMAIL = "mailto:khushalvaghamshi7@gmail.com";
 
 function PenLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -39,7 +39,7 @@ export function Hero() {
         onAnimationComplete={() => setSettled(true)}
       >
         <h1 className="font-pen pen-heavy text-5xl sm:text-6xl leading-[1.1] text-ink">
-          Hi, I&apos;m <DrawablyHighlight>Harsh</DrawablyHighlight>.
+          Hi, I&apos;m <DrawablyHighlight>Khushal</DrawablyHighlight>.
         </h1>
 
         <div className="mt-4 font-pen text-base">

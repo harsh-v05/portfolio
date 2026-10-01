@@ -20,7 +20,7 @@ const pen = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Harsh | AI Developer",
+  title: "Khushal | AI Developer",
   description:
     "Crafting smooth interfaces, clean systems, and shipping like a reflex.",
 };

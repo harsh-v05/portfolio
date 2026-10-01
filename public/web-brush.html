@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Brush</title>
+  <meta name="description" content="Draw freely. Watch clean silk strands and orb-web patches weave themselves along every stroke.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%95%B7%EF%B8%8F%3C/text%3E%3C/svg%3E">
+  <style>
+:root {
+  --background: #0c111c;
+  --foreground: #e7ecf4;
+  --muted: #232c40;
+  --primary: #c3cfe4;
+  --ring: #5f6c88;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: radial-gradient(1200px 800px at 50% 18%, #141c30 0%, #0c111c 55%, #080c14 100%);
+  width: 100%;
+  height: 100%;
+  color: var(--foreground);
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  height: 100svh;
+  min-height: 420px;
+  position: relative;
+  overflow: hidden;
+}
+
+canvas {
+  touch-action: none;
+  cursor: crosshair;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+header {
+  pointer-events: none;
+  user-select: none;
+  justify-content: space-between;
+  align-items: baseline;
+  display: flex;
+  position: absolute;
+  top: 36px;
+  left: 42px;
+  right: 42px;
+}
+
+.wordmark {
+  letter-spacing: .4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 29px;
+  font-weight: 400;
+}
+
+header p {
+  color: #7e8798;
+  margin: 0;
+  font-size: 14px;
+}
+
+.invitation {
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity .35s;
+  position: absolute;
+  top: 48%;
+  left: 52%;
+  transform: translate(-50%, -50%);
+}
+
+.invitation h1 {
+  letter-spacing: -2px;
+  margin: 0 0 12px;
+  font-size: clamp(30px, 4vw, 52px);
+  font-weight: 400;
+}
+
+.invitation p {
+  color: #7e8798;
+  margin: 0;
+  font-size: 14px;
+}
+
+.gone { opacity: 0; }
+
+.toolbar {
+  white-space: nowrap;
+  background: #101726f2;
+  border: 1px solid #26304a;
+  border-radius: 40px;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 22px;
+  display: flex;
+  position: absolute;
+  bottom: 78px;
+  left: 50%;
+  transform: translate(-50%);
+  box-shadow: 0 4px 24px #00000066;
+  user-select: none;
+}
+
+.toolbar label,
+.toolbar button {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.brush-dot {
+  background: #cdd9ec;
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 4px #1b2335;
+  flex: none;
+}
+
+.divider {
+  background: #26304a;
+  width: 1px;
+  height: 20px;
+  flex: none;
+}
+
+.toolbar button {
+  color: #aeb9cf;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 3px 0;
+  margin: 0;
+  font-family: inherit;
+}
+
+.toolbar button:hover { color: #eef3fb; }
+
+.toolbar button:disabled {
+  opacity: .3;
+  cursor: default;
+}
+
+button:focus-visible {
+  outline-offset: 5px;
+  outline: 2px solid #8fa0bd;
+}
+
+/* Slider */
+.size-slider {
+  width: 82px;
+  flex: none;
+}
+
+.slider-control {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+  --thumb: 12px;
+  --position: 0%;
+}
+
+.slider-track {
+  position: relative;
+  flex-grow: 1;
+  height: 4px;
+  width: 100%;
+  border-radius: 9999px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.slider-range {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+  height: 100%;
+  width: var(--position);
+  background: var(--primary);
+}
+
+.slider-thumb {
+  position: absolute;
+  inset-inline-start: var(--position);
+  top: 50%;
+  translate: -50% -50%;
+  display: block;
+  width: var(--thumb);
+  height: var(--thumb);
+  border-radius: 9999px;
+  border: 1px solid var(--ring);
+  background: #e7ecf4;
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--ring) 50%, transparent);
+  transition: color .15s cubic-bezier(.4, 0, .2, 1), box-shadow .15s cubic-bezier(.4, 0, .2, 1);
+  outline: none;
+}
+
+.slider-thumb::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.slider-thumb:hover,
+.slider-thumb:focus-visible,
+.slider-control[data-dragging] .slider-thumb {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+
+footer {
+  pointer-events: none;
+  user-select: none;
+  justify-content: space-between;
+  display: flex;
+  position: absolute;
+  bottom: 27px;
+  left: 42px;
+  right: 42px;
+}
+
+footer p {
+  color: #747d90;
+  margin: 0;
+  font-size: 13px;
+}
+
+footer a {
+  pointer-events: auto;
+  user-select: auto;
+  color: inherit;
+  text-underline-offset: 3px;
+  text-decoration: underline;
+}
+
+footer a:focus-visible {
+  outline-offset: 4px;
+  outline: 2px solid #8fa0bd;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 600px) {
+  header { top: 24px; left: 24px; right: 24px; }
+  .wordmark { font-size: 24px; }
+  .toolbar { gap: 13px; padding: 15px 19px; bottom: 73px; }
+  .size-slider { width: 56px; }
+  footer { bottom: 25px; left: 24px; right: 24px; flex-wrap: wrap; gap: 12px; }
+  footer p { font-size: 12px; }
+  .invitation h1 { letter-spacing: -1px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+  <main>
+    <canvas aria-label="Spider-web drawing canvas. Drag to weave silk strands and orb-web patches."></canvas>
+
+    <header>
+      <div class="wordmark">Web Brush</div>
+      <p>A living web</p>
+    </header>
+
+    <div class="invitation">
+      <h1>Weave your web.</h1>
+      <p>Click and wander.</p>
+    </div>
+
+    <div class="toolbar" aria-label="Weaving tools">
+      <span class="brush-dot"></span>
+      <label id="brush-label">Silk density</label>
+      <div class="size-slider">
+        <div class="slider-control">
+          <div class="slider-track"><div class="slider-range"></div></div>
+          <div class="slider-thumb" role="slider" tabindex="0" aria-labelledby="brush-label"
+               aria-orientation="horizontal" aria-valuemin="0.5" aria-valuemax="1.8" aria-valuenow="1"></div>
+        </div>
+      </div>
+      <span class="divider"></span>
+      <button id="undo" type="button" title="Undo last thread">Undo</button>
+      <button id="clear" type="button">Clear</button>
+    </div>
+
+    <footer>
+      <p>Drag anywhere. Weave the silk.</p>
+      <p><a href="/">Made by Harsh</a></p>
+    </footer>
+
+    <span class="sr-only" role="status">Draw to begin your web.</span>
+  </main>
+  <script>
+/* Web Brush — draw a stroke and clean silk strands, orb-web patches and
+ * bridging filaments weave themselves along it; spiders scuttle the threads.
+ * Two-layer render with progressive freezing keeps it cheap. Pure vector.
+ */
+(() => {
+  'use strict';
+
+  // ---------- constants ----------
+  const KIND = { WEB: 0, SPIDER: 1, BRIDGE: 2 };
+  const BLOOM_MS = 560;     // scale-in / draw-on time of a single mark
+  const SNAP_MS = 850;      // a finished strand snaps taut for this long
+  const BRIDGE_R = 130;     // max reach of a bridging filament
+
+  // deterministic hash in [0,1)
+  const hash = (n) => {
+    const v = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+    return v - Math.floor(v);
+  };
+
+  // ---------- DOM ----------
+  const canvas = document.querySelector('canvas');
+  const invitation = document.querySelector('.invitation');
+  const undoBtn = document.getElementById('undo');
+  const clearBtn = document.getElementById('clear');
+  const status = document.querySelector('[role="status"]');
+  const sliderCtl = document.querySelector('.slider-control');
+  const sliderThumb = document.querySelector('.slider-thumb');
+
+  const ctx = canvas.getContext('2d');
+  const cache = document.createElement('canvas');   // settled strokes live here
+  const cacheCtx = cache.getContext('2d');
+
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- state ----------
+  let strokes = [];          // [{points, marks, size, snapT, bridges, bbox, cum, total, cumDirty}]
+  let active = null;         // stroke being drawn
+  let cached = [];           // strokes already rasterised into `cache`
+  let partial = null;        // { stroke, count } — stroke whose strand + first `count` marks are in `cache`
+  let isSample = true;       // the opening orb web is still on the canvas
+  let hasDrawn = false;      // user has interacted (hides the invitation)
+  let brushSize = 1;
+  let seed = 1;
+  let size = { w: 1200, h: 800 };
+  let rafId = 0;
+  const disposed = false;
+
+  // ---------- render scheduling ----------
+  function requestFrame() {
+    rafId ||= requestAnimationFrame(frame);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { cancelAnimationFrame(rafId); rafId = 0; }
+    else requestFrame();
+  });
+
+  const isLive = (m) => m.kind === KIND.SPIDER; // always drawn on top, never cached
+  const isStatic = (m, now) => reducedMotion || now - m.t >= BLOOM_MS;
+
+  function frame() {
+    rafId = 0;
+    if (disposed || document.hidden) return;
+    const { w, h } = size;
+    const now = performance.now();
+    let settling = false;
+    let alive = false;
+
+    // invalidate the static layer if the stroke list changed underneath it (undo/clear)
+    if (cached.some((s, i) => strokes[i] !== s) || (partial && strokes[cached.length] !== partial.stroke)) {
+      cacheCtx.clearRect(0, 0, w, h);
+      cached = [];
+      partial = null;
+    }
+    // the strand under the spider's feet stays live: its landing pluck and the
+    // little ripple of its steps must keep re-rendering even once frozen. The
+    // cache is a raster, so pulling one stroke back out means a clear plus a
+    // rebake of everything before it — one frame, same cost as an undo.
+    if (!reducedMotion && spider.mode !== 'gone' && spider.stroke) {
+      const ss = spider.stroke;
+      const live = spiderStepOn(ss, now) !== null ||
+        (spider.mode !== 'migrate' && ss.snapT !== undefined && now - ss.snapT < SNAP_MS);
+      if (live && (cached.includes(ss) || (partial && partial.stroke === ss))) {
+        cacheCtx.clearRect(0, 0, w, h);
+        cached = [];
+        partial = null;
+      }
+    }
+    // freeze finished strokes, mark by mark, in order; the strand itself only
+    // freezes once its snap-taut wobble has died out and the spider has
+    // walked off it
+    while (cached.length < strokes.length) {
+      const s = strokes[cached.length];
+      if (s === active) break;
+      if (!reducedMotion && s.snapT && now - s.snapT < SNAP_MS) break;
+      if (!reducedMotion && spiderStepOn(s, now) !== null) break;   // the spider is walking it
+      if (!partial || partial.stroke !== s) { drawStrand(cacheCtx, s, null); partial = { stroke: s, count: 0 }; }
+      while (partial.count < s.marks.length) {
+        const m = s.marks[partial.count];
+        if (!isLive(m)) {
+          if (!isStatic(m, now)) break;
+          drawMark(cacheCtx, m, now, reducedMotion, s);
+        }
+        partial.count++;
+      }
+      if (partial.count < s.marks.length) break;
+      cached.push(s);
+      partial = null;
+    }
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(cache, 0, 0, w, h);
+    for (let i = cached.length; i < strokes.length; i++) {
+      const s = strokes[i];
+      const frozen = partial && partial.stroke === s;
+      if (!frozen) drawStrand(ctx, s, now);
+      drawMarks(ctx, s, now, frozen ? partial.count : 0);
+      if (!reducedMotion && (s === active || s.snapT && now - s.snapT < SNAP_MS ||
+        s.marks.some((m) => !isLive(m) && !isStatic(m, now)))) settling = true;
+    }
+    // committed bridge silk + the one big spider, always drawn live on top
+    drawSilk(ctx);
+    if (spider.mode !== 'gone') {
+      spiderHeal();
+      spiderUpdate(now);
+      // heal may have just retired the spider (e.g. the last strand was undone
+      // mid-frame) — never draw a state that no longer exists
+      if (spider.mode === 'gone') {
+        rafId = settling || alive ? requestAnimationFrame(frame) : 0;
+        return;
+      }
+      drawSpiderNow(ctx, now);
+      if (!reducedMotion) alive = true;
+    }
+    rafId = settling || alive ? requestAnimationFrame(frame) : 0;
+  }
+
+  // ---------- strand (the silk line itself) ----------
+  function drawStrand(c, s, now) {
+    const pts = s.points;
+    if (!pts.length) return;
+    // plucked-string wobble right after lift-off; ends stay pinned
+    let wob = 0;
+    if (now !== null && s.snapT !== undefined) {
+      const e = now - s.snapT;
+      if (e < SNAP_MS) wob = Math.sin(e * 0.03) * (1 - e / SNAP_MS) ** 1.5 * 5 * s.size;
+    }
+    // the walking spider's weight: a soft little ripple in the strand under its feet
+    const sd = now !== null && !reducedMotion ? spiderStepOn(s, now) : null;
+    const path = new Path2D();
+    path.moveTo(pts[0].x, pts[0].y);
+    if (!wob && sd === null) {
+      for (let i = 1; i < pts.length; i++) path.lineTo(pts[i].x, pts[i].y);
+    } else {
+      const n = pts.length - 1;
+      if (sd !== null) ensureCum(s);
+      for (let i = 1; i < n; i++) {
+        const dx = pts[i + 1].x - pts[i - 1].x, dy = pts[i + 1].y - pts[i - 1].y;
+        const L = Math.hypot(dx, dy) || 1;
+        let off = wob * Math.sin(Math.PI * i / n);
+        if (sd !== null) {
+          const u = (s.cum[i] - sd) / 80;
+          off += Math.sin(now * 0.014 + i * 0.35) * 1.8 * s.size * Math.exp(-u * u);
+        }
+        path.lineTo(pts[i].x - dy / L * off, pts[i].y + dx / L * off);
+      }
+      path.lineTo(pts[n].x, pts[n].y);
+    }
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    // fine silk: faint halo + thin bright core, nothing chunky
+    c.strokeStyle = 'rgba(190,205,235,0.10)'; c.lineWidth = 3.2 * s.size; c.stroke(path);
+    c.strokeStyle = 'rgba(200,214,240,0.55)'; c.lineWidth = 1.0 * s.size; c.stroke(path);
+    c.strokeStyle = 'rgba(238,244,253,0.9)'; c.lineWidth = 0.42 * s.size; c.stroke(path);
+  }
+
+  function drawMarks(c, stroke, now, from) {
+    for (let i = from; i < stroke.marks.length; i++) {
+      const m = stroke.marks[i];
+      if (!isLive(m)) drawMark(c, m, now, reducedMotion, stroke);
+    }
+  }
+
+  function drawMark(c, m, now, still, s) {
+    const progress = still ? 1 : Math.min(1, Math.max(0, (now - m.t) / BLOOM_MS));
+    if (!progress) return;
+    const grow = 1 - (1 - progress) ** 3;
+    switch (m.kind) {
+      case KIND.WEB: drawWebPatch(c, m, grow); break;
+      case KIND.BRIDGE: drawBridge(c, m, progress); break;
+    }
+  }
+
+  // a full round orb-web patch: radial spokes + sagging capture rings all the way around
+  function drawWebPatch(c, m, grow) {
+    c.save();
+    c.translate(m.x, m.y);
+    c.rotate(m.r * Math.PI * 2);
+    c.scale(m.s * grow, m.s * grow);
+    const rays = 7 + Math.floor(hash(m.r * 97) * 5);   // 7–11 spokes
+    const len = 24 + hash(m.r * 163) * 18;
+    const ang = [], rl = [];
+    for (let i = 0; i < rays; i++) {
+      ang.push(m.r * Math.PI * 2 + i / rays * Math.PI * 2); // full circle
+      rl.push(len * (0.85 + hash(m.r * 191 + i * 5.7) * 0.3));
+    }
+    c.lineCap = 'round';
+    // spokes: thin silk radiating all around
+    c.beginPath();
+    for (let i = 0; i < rays; i++) {
+      const bx = Math.cos(ang[i]) * rl[i], by = Math.sin(ang[i]) * rl[i];
+      c.moveTo(0, 0);
+      c.quadraticCurveTo(bx * 0.5 - Math.sin(ang[i]) * rl[i] * 0.1, by * 0.5 + Math.cos(ang[i]) * rl[i] * 0.1, bx, by);
+    }
+    c.stroke();
+    // capture arcs: 4 rings, sagging outward, closing the full circle
+    c.strokeStyle = 'rgba(190,205,235,0.62)'; c.lineWidth = 0.42;
+    c.beginPath();
+    for (const f of [0.3, 0.5, 0.72, 0.94]) {
+      for (let i = 0; i < rays; i++) {
+        const j = (i + 1) % rays;
+        const x1 = Math.cos(ang[i]) * rl[i] * f, y1 = Math.sin(ang[i]) * rl[i] * f;
+        const x2 = Math.cos(ang[j]) * rl[j] * f, y2 = Math.sin(ang[j]) * rl[j] * f;
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        const ml = Math.hypot(mx, my) || 1;
+        const k = 1 + 0.13 * len / ml; // push the control point outward so arcs sag
+        c.moveTo(x1, y1);
+        c.quadraticCurveTo(mx * k, my * k, x2, y2);
+      }
+    }
+    c.stroke();
+    c.restore();
+  }
+
+  // a sagging filament tying this stroke to nearby silk; draws itself on
+  function drawBridge(c, m, p) {
+    const dx = m.tx - m.x, dy = m.ty - m.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const nx = -dy / dist, ny = dx / dist;
+    const side = m.r > 0.5 ? 1 : -1;
+    const sag = dist * (0.10 + hash(m.r * 7) * 0.14) * side;
+    const cx = (m.x + m.tx) / 2 + nx * sag, cy = (m.y + m.ty) / 2 + ny * sag;
+    const segs = 20;
+    const upto = Math.max(1, Math.round(segs * p));
+    const qx = (t) => (1 - t) ** 2 * m.x + 2 * (1 - t) * t * cx + t ** 2 * m.tx;
+    const qy = (t) => (1 - t) ** 2 * m.y + 2 * (1 - t) * t * cy + t ** 2 * m.ty;
+    c.save();
+    c.lineCap = 'round';
+    c.strokeStyle = 'rgba(190,205,235,0.55)'; c.lineWidth = 0.7 * m.s;
+    c.beginPath();
+    c.moveTo(m.x, m.y);
+    for (let i = 1; i <= upto; i++) c.lineTo(qx(i / segs), qy(i / segs));
+    c.stroke();
+    c.restore();
+  }
+
+  // ---------- path walking (for spiders) ----------
+  function ensureCum(s) {
+    if (!s.cumDirty && s.cum) return;
+    const pts = s.points, cum = [0];
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) {
+      total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+      cum.push(total);
+    }
+    s.cum = cum; s.total = total; s.cumDirty = false;
+  }
+
+  function pointAt(s, d) {
+    const pts = s.points;
+    if (!pts.length) return { x: 0, y: 0, ang: 0 };
+    if (pts.length === 1 || d <= 0) return { x: pts[0].x, y: pts[0].y, ang: 0 };
+    if (d >= s.total) {
+      const n = pts.length - 1;
+      return { x: pts[n].x, y: pts[n].y, ang: Math.atan2(pts[n].y - pts[n - 1].y, pts[n].x - pts[n - 1].x) };
+    }
+    let lo = 0, hi = s.cum.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (s.cum[mid] < d) lo = mid + 1; else hi = mid; }
+    const i = lo;
+    const t = (d - s.cum[i - 1]) / (s.cum[i] - s.cum[i - 1] || 1);
+    const a = pts[i - 1], b = pts[i];
+    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, ang: Math.atan2(b.y - a.y, b.x - a.x) };
+  }
+
+  // ---------- the one big spider ----------
+  // A single large spider lives on the canvas. It patrols its web endlessly at a
+  // medium pace; when a fresh strand is drawn it walks out, spins a sagging
+  // bridge thread across to the new strand, walks it to the far end and settles.
+  let spider = { mode: 'gone', stroke: null, seedR: hash(1.23), pending: [] };
+  let silk = [];   // committed bridge threads: { pts, cum, total, a, b } — redrawn every frame
+
+  const SPIDER_PACE = 75;    // medium scuttle, px/s
+  const SPIDER_SCALE = 3.0;  // the one big spider — much larger
+
+  // sagging thread between two points, arc-length parametrised (polyline-sampled quadratic)
+  function makeThread(x1, y1, x2, y2, sag) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const dist = Math.hypot(dx, dy) || 1;
+    const nx = -dy / dist, ny = dx / dist;
+    const mx = (x1 + x2) / 2 + nx * sag, my = (y1 + y2) / 2 + ny * sag;
+    const N = 48, pts = [], cum = [0];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;
+      pts.push({
+        x: (1 - u) ** 2 * x1 + 2 * (1 - u) * u * mx + u ** 2 * x2,
+        y: (1 - u) ** 2 * y1 + 2 * (1 - u) * u * my + u ** 2 * y2
+      });
+      if (i) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+    }
+    return { points: pts, cum, total: cum[N] };   // same shape as a stroke → pointAt works
+  }
+
+  function truncateThread(path, d) {
+    const pts = [], cum = [0];
+    for (let i = 0; i < path.points.length && path.cum[i] <= d; i++) {
+      pts.push(path.points[i]);
+      if (i) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+    }
+    return { points: pts, cum, total: cum[cum.length - 1] || 0 };
+  }
+
+  // the same thread walked backwards (spider heading home along its own silk)
+  function reverseThread(path, d) {
+    const pts = [];
+    for (let i = 0; i < path.points.length && path.cum[i] <= d; i++) {
+      pts.push({ x: path.points[i].x, y: path.points[i].y });
+    }
+    pts.reverse();
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) {
+      cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+    }
+    return { points: pts, cum, total: cum[cum.length - 1] || 0 };
+  }
+
+  // splice several threads into one walkable path
+  function joinThreads(parts) {
+    const pts = [];
+    for (const t of parts) for (const q of t.points) pts.push({ x: q.x, y: q.y });
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) {
+      cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+    }
+    return { points: pts, cum, total: cum[cum.length - 1] || 0 };
+  }
+
+  // arc-length on a stroke closest to a point (re-anchors the patrol after a trip)
+  function nearestD(s, x, y) {
+    ensureCum(s);
+    let best = 0, bd = Infinity;
+    for (let i = 0; i < s.points.length; i++) {
+      const dd = (s.points[i].x - x) ** 2 + (s.points[i].y - y) ** 2;
+      if (dd < bd) { bd = dd; best = i; }
+    }
+    return s.cum[best];
+  }
+
+  function rescaleThread(p, fx, fy) {
+    for (const q of p.points) { q.x *= fx; q.y *= fy; }
+    const cum = [0];
+    for (let i = 1; i < p.points.length; i++) {
+      cum.push(cum[i - 1] + Math.hypot(p.points[i].x - p.points[i - 1].x, p.points[i].y - p.points[i - 1].y));
+    }
+    p.cum = cum; p.total = cum[cum.length - 1] || 0;
+  }
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  // pose for any mode: { x, y, ang, ph, walking, spun?, arrived? }
+  function spiderPose(sp, now) {
+    const t = Math.max(0, (now - sp.t0) / 1000);
+    if (sp.mode === 'patrol') {
+      const s = sp.stroke;
+      ensureCum(s);
+      const walkS = Math.max(0.8, s.total / SPIDER_PACE);
+      const pauseS = 2.4;
+      const leg = walkS + pauseS;
+      const cyc = (t + sp.offset) % (2 * leg);
+      const forward = cyc < leg;
+      const tc = forward ? cyc : cyc - leg;
+      if (tc < walkS) {
+        const d = s.total * (forward ? tc / walkS : 1 - tc / walkS);
+        const P = pointAt(s, d);
+        return { x: P.x, y: P.y, ang: P.ang + (forward ? 0 : Math.PI), ph: d * 0.35, walking: true, d };
+      }
+      const A = pointAt(s, forward ? s.total : 0);
+      return { x: A.x, y: A.y, ang: A.ang + (forward ? 0 : Math.PI), ph: 0, walking: false };
+    }
+    if (sp.mode === 'return') {
+      // walking home along its own banked thread
+      const crossS = Math.max(0.6, sp.path.total / SPIDER_PACE);
+      const d = sp.path.total * Math.min(1, t / crossS);
+      const P = pointAt(sp.path, d);
+      if (t >= crossS) return { x: P.x, y: P.y, ang: pathAng(sp.path, d), ph: d * 0.35, walking: false, arrived: true };
+      return { x: P.x, y: P.y, ang: pathAng(sp.path, d), ph: d * 0.35, walking: true };
+    }
+    // migrate: cross the bridge paying out thread, then walk the new strand to its end
+    const crossS = Math.max(0.6, sp.path.total / SPIDER_PACE);
+    if (t < crossS) {
+      const d = sp.path.total * (t / crossS);
+      const P = pointAt(sp.path, d);
+      return { x: P.x, y: P.y, ang: pathAng(sp.path, d), ph: d * 0.35, walking: true, spun: d };
+    }
+    const s = sp.stroke;
+    ensureCum(s);
+    const t2 = t - crossS;
+    const walkS = Math.max(0.8, s.total / SPIDER_PACE);
+    if (t2 < walkS) {
+      const d = s.total * (t2 / walkS);
+      const P = pointAt(s, d);
+      return { x: P.x, y: P.y, ang: P.ang, ph: d * 0.35, walking: true, d };
+    }
+    const A = pointAt(s, s.total);
+    return { x: A.x, y: A.y, ang: A.ang, ph: 0, walking: false, arrived: true };
+  }
+  // arc-length position of the spider's feet on a stroke, or null when it is
+  // not walking that strand right now (paused, mid-bridge, or elsewhere)
+  function spiderStepOn(s, now) {
+    if (spider.mode === 'gone' || spider.stroke !== s) return null;
+    const pose = spiderPose(spider, now);
+    return pose.walking && pose.d !== undefined ? pose.d : null;
+  }
+
+  // self-heal: if the strand the spider is standing on (or heading to) has been
+  // removed out from under it, fall back to a surviving strand — never walk a ghost
+  function spiderHeal() {
+    if (spider.mode === 'gone') return;
+    const now = performance.now();
+    const keep = spider.pending || [];
+    if (spider.mode === 'migrate') {
+      if (spider.stroke && strokes.includes(spider.stroke)) return;   // crossing to a live target
+      // destination vanished mid-trip: bank whatever thread is spun — it stays,
+      // hanging from the source web — and the spider walks home along it
+      if (spider.a && strokes.includes(spider.a)) {
+        startReturn(spider.a, now, keep);
+        return;
+      }
+      spider = { mode: 'gone', stroke: null, seedR: spider.seedR, pending: keep };
+      return;
+    }
+    if (spider.stroke && strokes.includes(spider.stroke)) return;     // home strand is alive
+    // home strand removed — hop to the newest survivor, or leave if the canvas is empty
+    const home = strokes[strokes.length - 1] || null;
+    if (home) {
+      ensureCum(home);
+      spider = { mode: 'patrol', stroke: home, t0: now, offset: 0, seedR: spider.seedR, pending: keep };
+    } else {
+      spider = { mode: 'gone', stroke: null, seedR: spider.seedR, pending: keep };
+    }
+  }
+
+  function pathAng(p, d) {
+    const pts = p.points, cum = p.cum;
+    let lo = 0, hi = cum.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (cum[mid] < d) lo = mid + 1; else hi = mid; }
+    const i = Math.max(1, lo);
+    return Math.atan2(pts[i].y - pts[i - 1].y, pts[i].x - pts[i - 1].x);
+  }
+
+  // a fresh strand landed. It is queued, never stolen mid-flight: the spider
+  // finishes whatever it is doing, then visits each new strand in the order
+  // drawn — bridge over, walk the strand, settle, and only then the next one.
+  function spiderClaim(stroke, now) {
+    if (stroke.points.length < 8) return;   // too small to be worth the trip
+    ensureCum(stroke);
+    if (!spider.pending) spider.pending = [];
+    if (spider.mode === 'gone' || !spider.stroke) {
+      // no home web to come from — the spider appears on the new strand and patrols
+      spider.seedR = hash(spider.seedR + 0.7);
+      spider = { mode: 'patrol', stroke, t0: now, offset: 0, seedR: spider.seedR, pending: spider.pending };
+      return;
+    }
+    if (spider.mode === 'migrate' || spider.mode === 'return' || (spider.pending && spider.pending.length)) {
+      // busy walking (or already booked): line up behind the last queued strand
+      spider.pending.push(stroke);
+      return;
+    }
+    startMigration(stroke, now);
+  }
+
+  // leave the current pose, spinning a sagging bridge to the new strand's start
+  function startMigration(stroke, now) {
+    const pose = spiderPose(spider, now);
+    const src = spider.stroke;
+    spider.seedR = hash(spider.seedR + 0.7);
+    const seedR = spider.seedR;
+    const entry = pointAt(stroke, 0);
+    const sag = Math.hypot(entry.x - pose.x, entry.y - pose.y) * (0.10 + seedR * 0.08);
+    spider = { mode: 'migrate', stroke, path: makeThread(pose.x, pose.y, entry.x, entry.y, sag),
+      a: src, b: stroke, t0: now, committed: false, landed: false, seedR, pending: spider.pending || [] };
+  }
+
+  // the destination strand was undone mid-trip: whatever thread is spun stays
+  // (hanging from the source web) and the spider turns around and walks home
+  // along its own silk — the bridge never just vanishes
+  function startReturn(src, now, keep) {
+    const pose = spiderPose(spider, now);
+    const d = spider.committed || pose.spun === undefined
+      ? spider.path.total            // crossing already behind us
+      : pose.spun;                   // still out on the thread
+    // bank whatever is spun unless spiderUpdate already banked the full bridge
+    // (truncateThread at d = total returns the whole thread, so the one-frame
+    // window where the crossing finished but was never committed is covered)
+    if (!spider.committed && d > 4) silk.push({ ...truncateThread(spider.path, d), a: spider.a, b: null });
+    const back = reverseThread(spider.path, d);
+    const parts = [];
+    if (d >= spider.path.total - 0.5) {
+      // crossing already behind us, standing on the dead strand: walk back to
+      // where the bridge landed first, then home along the bridge — that short
+      // connector becomes real silk too, so the walk home is never over
+      // invisible thread
+      const land = pointAt(spider.path, spider.path.total);
+      if (Math.hypot(land.x - pose.x, land.y - pose.y) > 8) {
+        const hop = makeThread(pose.x, pose.y, land.x, land.y, 0);
+        parts.push(hop);
+        silk.push({ ...hop, a: spider.a, b: null });
+      }
+    }
+    parts.push(back);
+    const path = joinThreads(parts.filter((t) => t.points.length > 1 && t.total > 1));
+    ensureCum(src);
+    if (path.points.length < 2) {
+      // spun nothing yet: simply re-anchor on the source strand
+      spider = { mode: 'patrol', stroke: src, t0: now, offset: 0, seedR: spider.seedR,
+        pending: keep || spider.pending || [] };
+      return;
+    }
+    const o = back.points[back.points.length - 1];   // where the trip began
+    spider = { mode: 'return', stroke: src, path,
+      srcF: clamp(nearestD(src, o.x, o.y) / (src.total || 1), 0, 1),
+      t0: now, seedR: spider.seedR, pending: keep || spider.pending || [] };
+  }
+
+  // advance migration → patrol once the strand walk ends. Queued strands are
+  // visited one by one: the spider finishes the strand it is on, rests a beat
+  // at its end, then bridges over to the next strand in the order drawn.
+  function spiderUpdate(now) {
+    // prune queued strands that no longer exist
+    if (spider.pending) {
+      while (spider.pending.length && !strokes.includes(spider.pending[0])) spider.pending.shift();
+    }
+    const pose = (spider.mode === 'migrate' || spider.mode === 'return')
+      ? spiderPose(spider, now) : null;
+    const busy = !!pose && !pose.arrived;   // crossing, walking a strand, or walking home
+    if (spider.pending && spider.pending.length && !busy && spider.stroke) {
+      if (!spider.resting) spider.resting = now;
+      if (now - spider.resting >= 1400) {
+        const next = spider.pending.shift();
+        startMigration(next, now);
+        return;
+      }
+    } else if (spider.resting) {
+      delete spider.resting;
+    }
+    if (!pose) return;
+    // bank the bridge the moment the crossing is behind us — spun is undefined
+    // once the strand walk begins, so the old tight 0.5px window could be
+    // stepped over by a single frame and the thread would never be banked
+    if (spider.mode === 'migrate' && !spider.committed &&
+        (pose.spun === undefined || pose.spun >= spider.path.total - 0.5)) {
+      silk.push({ ...spider.path, a: spider.a, b: spider.stroke });   // the thread stays forever
+      spider.committed = true;
+    }
+    // touchdown on the new strand: it swings under the spider's weight — the
+    // same plucked-string snap as when a drawn strand is released
+    if (spider.mode === 'migrate' && !spider.landed && pose.spun === undefined) {
+      spider.landed = true;
+      spider.stroke.snapT = now;
+    }
+    if (pose.arrived) {
+      const s = spider.stroke;
+      ensureCum(s);
+      if (spider.mode === 'return') {
+        // home again: resume the patrol from the exact spot the trip began —
+        // and the home strand gives the same little swing
+        const walkS = Math.max(0.8, s.total / SPIDER_PACE);
+        s.snapT = now;
+        spider = { mode: 'patrol', stroke: s, t0: now,
+          offset: walkS * clamp(spider.srcF || 0, 0, 1), seedR: spider.seedR,
+          pending: spider.pending || [] };
+        return;
+      }
+      // offset = walkS → the patrol cycle opens paused at the strand's last point
+      spider = { mode: 'patrol', stroke: s, t0: now,
+        offset: Math.max(0.8, s.total / SPIDER_PACE), seedR: spider.seedR,
+        pending: spider.pending || [] };
+    }
+  }
+
+  function drawSilk(c) {
+    c.save();
+    c.lineCap = 'round';
+    for (const pass of [[2.4, 'rgba(190,205,235,0.10)'], [0.55, 'rgba(205,218,240,0.55)']]) {
+      c.lineWidth = pass[0]; c.strokeStyle = pass[1];
+      for (const b of silk) strokeThread(c, b, 1);
+    }
+    c.restore();
+  }
+
+  function strokeThread(c, p, frac) {
+    const n = Math.max(2, Math.round(p.points.length * clamp(frac, 0, 1)));
+    c.beginPath();
+    c.moveTo(p.points[0].x, p.points[0].y);
+    for (let i = 1; i < n; i++) c.lineTo(p.points[i].x, p.points[i].y);
+    c.stroke();
+  }
+
+  function drawSpiderNow(c, now) {
+    const pose = spiderPose(spider, now);
+    c.save();
+    // thread being spun right now, trailing the spider
+    if (spider.mode === 'migrate' && pose.spun !== undefined && !spider.committed) {
+      c.lineCap = 'round';
+      c.strokeStyle = 'rgba(205,218,240,0.5)'; c.lineWidth = 0.55;
+      strokeThread(c, spider.path, pose.spun / spider.path.total);
+    }
+    c.translate(pose.x, pose.y);
+    c.rotate(pose.ang);
+    c.scale(SPIDER_SCALE, SPIDER_SCALE);
+    spiderBody(c, pose.ph);
+    c.restore();
+  }
+
+  // local space: facing +x, legs fan up/down, abdomen behind
+  function spiderBody(c, phase) {
+    c.strokeStyle = '#9fb0ca'; c.lineWidth = 1; c.lineCap = 'round';
+    c.beginPath();
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const a = side * (0.55 + i * 0.42) + 0.1 * Math.sin(phase + i * 1.6 + side);
+        const len = 12.5 - i * 0.9 + hash(i * 3.3 + side) * 1.6;
+        const rx = 1.5, ry = side * 1.1;
+        const dirx = Math.cos(a), diry = Math.sin(a);
+        const kx = rx + dirx * len * 0.55 - diry * len * 0.3 * side;
+        const ky = ry + diry * len * 0.55 + dirx * len * 0.3 * side;
+        c.moveTo(rx, ry);
+        c.quadraticCurveTo(kx, ky, rx + dirx * len, ry + diry * len);
+      }
+    }
+    c.stroke();
+    c.fillStyle = '#2b3448';
+    c.strokeStyle = '#8fa0bd'; c.lineWidth = 0.6;
+    c.beginPath(); c.ellipse(2, 0, 3.2, 2.6, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.beginPath(); c.ellipse(-3.6, 0, 4.4, 3.6, 0, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.strokeStyle = '#54648a'; c.lineWidth = 0.9;
+    c.beginPath();
+    c.moveTo(-2.2, -1.6); c.lineTo(-3.6, 0); c.lineTo(-2.2, 1.6);
+    c.moveTo(-4.4, -1.4); c.lineTo(-5.8, 0); c.lineTo(-4.4, 1.4);
+    c.stroke();
+    c.fillStyle = '#d9e7ff';
+    c.beginPath(); c.arc(4.3, -0.8, 0.5, 0, 7); c.fill();
+    c.beginPath(); c.arc(4.3, 0.8, 0.5, 0, 7); c.fill();
+  }
+
+  // ---------- sizing ----------
+  function extendBBox(s, p) {
+    if (p.x < s.minx) s.minx = p.x;
+    if (p.x > s.maxx) s.maxx = p.x;
+    if (p.y < s.miny) s.miny = p.y;
+    if (p.y > s.maxy) s.maxy = p.y;
+  }
+
+  function rebbox(s) {
+    s.minx = Infinity; s.miny = Infinity; s.maxx = -Infinity; s.maxy = -Infinity;
+    for (const p of s.points) extendBBox(s, p);
+  }
+
+  function resize() {
+    const prev = size;
+    const rect = canvas.getBoundingClientRect();
+    size = { w: rect.width, h: rect.height };
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cache.width = canvas.width;
+    cache.height = canvas.height;
+    cached = [];
+    partial = null;
+    cacheCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (strokes.length && prev.w && prev.h) {
+      const fx = rect.width / prev.w, fy = rect.height / prev.h;
+      for (const s of strokes) {
+        for (const p of s.points) { p.x *= fx; p.y *= fy; }
+        for (const m of s.marks) {
+          m.x *= fx; m.y *= fy;
+          if (m.tx !== undefined) { m.tx *= fx; m.ty *= fy; }
+        }
+        rebbox(s);
+        s.cumDirty = true;
+      }
+      for (const t of silk) rescaleThread(t, fx, fy);
+      // a trip in progress is never cancelled by a resize: the thread rescales
+      // like any other silk and the crossing continues. A committed bridge
+      // shares its points with the banked silk copy (already rescaled above),
+      // so only its arc-length table is rebuilt — no double scaling.
+      if (spider.mode === 'migrate' && spider.path) {
+        rescaleThread(spider.path, spider.committed ? 1 : fx, spider.committed ? 1 : fy);
+      } else if (spider.mode === 'return' && spider.path) {
+        rescaleThread(spider.path, fx, fy);
+      }
+    }
+  }
+  resize();
+  new ResizeObserver(resize).observe(canvas);
+
+  // ---------- the opening orb web ----------
+  function weaveSample() {
+    if (disposed || !isSample) return;
+    const { w, h } = size;
+    const scale = Math.min(w / 1000, h / 720, 1.15);
+    const cx = w * 0.5, cy = h * 0.45;
+    const R = Math.min(w, h) * 0.3;
+    const now = performance.now();
+    const made = [];
+    const mk = (stroke, x, y, a, r, t, kind) =>
+      stroke.marks.push({ x, y, a, s: stroke.size, r, t, kind });
+
+    const line = (x1, y1, x2, y2, sz, t0, bow = 0) => {
+      const stroke = { points: [], marks: [], size: sz, bridges: 0, cum: null, total: 0, cumDirty: true,
+        minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
+      const d = Math.hypot(x2 - x1, y2 - y1);
+      const n = Math.max(1, Math.round(d / (9 * sz)));
+      const a = Math.atan2(y2 - y1, x2 - x1);
+      const nx = -Math.sin(a), ny = Math.cos(a);
+      for (let i = 0; i <= n; i++) {
+        const f = i / n;
+        const x = x1 + (x2 - x1) * f + nx * Math.sin(Math.PI * f) * bow;
+        const y = y1 + (y2 - y1) * f + ny * Math.sin(Math.PI * f) * bow;
+        stroke.points.push({ x, y });
+        extendBBox(stroke, { x, y });
+        if (i > 0 && i < n && hash(seed + i * 2.7) < 0.2) {
+          mk(stroke, x, y, a, hash(seed + i * 4.1), t0 + i * 24, KIND.WEB);
+        }
+      }
+      return stroke;
+    };
+
+    // radial spokes — a real orb web runs 15–20
+    const N = 17;
+    const tips = [];
+    for (let i = 0; i < N; i++) {
+      const a = i / N * Math.PI * 2 - Math.PI / 2 + hash(i * 3.1) * 0.24;
+      const rr = R * (0.85 + hash(i * 7.7) * 0.24);
+      const tx = cx + Math.cos(a) * rr, ty = cy + Math.sin(a) * rr * 0.88;
+      tips.push({ x: tx, y: ty });
+      made.push(line(cx, cy, tx, ty, scale * 0.75, now + i * 36));
+    }
+    // frame threads with a gentle outward bow
+    for (let i = 0; i < N; i++) {
+      const t1 = tips[i], t2 = tips[(i + 1) % N];
+      made.push(line(t1.x, t1.y, t2.x, t2.y, scale * 0.75, now + 150 + i * 24,
+        Math.hypot(t2.x - t1.x, t2.y - t1.y) * 0.05));
+    }
+    // capture spiral — tight, many turns, no ornaments
+    const spiral = { points: [], marks: [], size: scale, bridges: 0, cum: null, total: 0, cumDirty: true,
+      minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
+    const loops = 7.5, r0 = R * 0.14, r1 = R * 0.8;
+    const steps = 700;
+    for (let i = 0; i <= steps; i++) {
+      const f = i / steps;
+      const ang = -Math.PI / 2 + f * loops * Math.PI * 2;
+      const rad = r0 + (r1 - r0) * f;
+      const x = cx + Math.cos(ang) * rad, y = cy + Math.sin(ang) * rad * 0.88;
+      spiral.points.push({ x, y });
+      extendBBox(spiral, { x, y });
+      if (i % 3 === 0 && hash(seed + i * 1.9) < 0.12) {
+        mk(spiral, x, y, ang + Math.PI / 2, hash(seed + i * 2.3), now + 500 + i * 3, KIND.WEB);
+      }
+    }
+    made.push(spiral);
+
+    strokes = made;
+    // the one big spider lives on the sample spiral
+    ensureCum(spiral);
+    spider = { mode: 'patrol', stroke: spiral, t0: now, offset: 0, seedR: hash(seed + 99), pending: [] };
+    syncUI();
+    requestFrame();
+  }
+  weaveSample();
+
+  // ---------- stroke building ----------
+  function nearestSilk(current, x, y, R) {
+    let bx = 0, by = 0, bd = R * R;
+    for (const s of strokes) {
+      if (s === current && s.points.length < 14) continue;
+      if (x < s.minx - R || x > s.maxx + R || y < s.miny - R || y > s.maxy + R) continue;
+      const pts = s.points;
+      const stop = s === current ? pts.length - 12 : pts.length;
+      for (let i = 0; i < stop; i += 2) {
+        const dx = pts[i].x - x, dy = pts[i].y - y;
+        const d = dx * dx + dy * dy;
+        if (d < bd && d > 4) { bd = d; bx = pts[i].x; by = pts[i].y; }
+      }
+    }
+    return bd < R * R ? { x: bx, y: by } : null;
+  }
+
+  function addPoint(p, force = false) {
+    const stroke = active;
+    if (!stroke) return;
+    const last = stroke.points.at(-1);
+    if (!last) {
+      stroke.points.push(p);
+      extendBBox(stroke, p);
+      stroke.marks.push({ ...p, a: 0, s: stroke.size, r: hash(seed++), t: performance.now(), kind: KIND.WEB });
+      return;
+    }
+    const dist = Math.hypot(p.x - last.x, p.y - last.y);
+    const spacing = 9 * stroke.size;
+    if (dist < 0.5 || (dist < spacing && !force)) return;
+    const n = Math.max(1, Math.floor(dist / spacing));
+    const angle = Math.atan2(p.y - last.y, p.x - last.x);
+    const now = performance.now();
+    for (let k = 1; k <= n; k++) {
+      const x = last.x + (p.x - last.x) * k / n;
+      const y = last.y + (p.y - last.y) * k / n;
+      stroke.points.push({ x, y });
+      stroke.cumDirty = true;
+      extendBBox(stroke, { x, y });
+      const rnd = hash(seed++);
+      let kind = null;
+      if (rnd < 0.34) kind = KIND.WEB; // web patches only — one big spider handles all patrolling
+      if (kind !== null) stroke.marks.push({ x, y, a: angle, s: stroke.size, r: rnd, t: now + k * 8, kind });
+      // bridging filament toward nearby silk (ties strokes into one web)
+      if (hash(seed++) < 0.2 && stroke.bridges < stroke.points.length / 5) {
+        const q = nearestSilk(stroke, x, y, BRIDGE_R * stroke.size);
+        if (q) {
+          stroke.bridges++;
+          stroke.marks.push({ x, y, tx: q.x, ty: q.y, a: angle, s: stroke.size,
+            r: hash(seed++), t: now + k * 8 + 60, kind: KIND.BRIDGE });
+        }
+      }
+    }
+    requestFrame();
+  }
+
+  function endStroke() {
+    const stroke = active;
+    if (!stroke) return;
+    active = null;   // done: hover must not extend the strand
+    const now = performance.now();
+    stroke.snapT = now;
+    // a new strand is born: the big spider comes to claim it, bridging from the old web
+    spiderClaim(stroke, now);
+    requestFrame();
+  }
+
+  function beginStroke() {
+    if (isSample) {
+      strokes = []; silk = []; isSample = false;
+      spider = { mode: 'gone', stroke: null, seedR: spider.seedR, pending: [] };
+    }
+    setHasDrawn(true);
+    const stroke = { points: [], marks: [], size: brushSize, bridges: 0, cum: null, total: 0, cumDirty: true,
+      minx: Infinity, miny: Infinity, maxx: -Infinity, maxy: -Infinity };
+    strokes.push(stroke);
+    active = stroke;
+    return stroke;
+  }
+
+  function setHasDrawn(v) {
+    hasDrawn = v;
+    invitation.classList.toggle('gone', v);
+    syncUI();
+  }
+
+  function syncUI() {
+    const disabled = hasDrawn && strokes.length === 0;
+    undoBtn.disabled = disabled;
+    clearBtn.disabled = disabled;
+    status.textContent = hasDrawn ? `${strokes.length} silk threads woven.` : 'Draw to begin your web.';
+  }
+
+  // ---------- pointer input ----------
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    canvas.setPointerCapture(e.pointerId);
+    beginStroke();
+    addPoint(pos(e), true);
+    syncUI();
+    requestFrame();
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!active) return;
+    // use every coalesced sample so fast drags stay smooth
+    const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
+    if (events.length) for (const ev of events) addPoint(pos(ev));
+    else addPoint(pos(e));
+  });
+  canvas.addEventListener('pointerup', (e) => {
+    if (active) addPoint(pos(e), true);
+    endStroke();
+  });
+  canvas.addEventListener('pointercancel', endStroke);
+  canvas.addEventListener('lostpointercapture', endStroke);
+
+  // ---------- toolbar ----------
+  undoBtn.addEventListener('click', () => {
+    active = null;
+    const popped = strokes.pop();
+    isSample = false;
+    if (popped) {
+      // a bridge stays as long as one of its webs survives — silk does not
+      // evaporate just because the far web was undone
+      silk = silk.filter((b) => strokes.includes(b.a) || strokes.includes(b.b));
+      if (spider.pending) spider.pending = spider.pending.filter((s) => s !== popped && strokes.includes(s));
+      // spiderHeal (run per frame) re-homes the spider if it was standing on the
+      // popped strand — nothing to do here
+    }
+    setHasDrawn(true);
+    requestFrame();
+  });
+  clearBtn.addEventListener('click', () => {
+    active = null;
+    strokes = [];
+    silk = [];
+    spider = { mode: 'gone', stroke: null, seedR: spider.seedR, pending: [] };
+    isSample = false;
+    setHasDrawn(true);
+    requestFrame();
+  });
+
+  // density slider (pointer + keyboard)
+  const S = { min: 0.5, max: 1.8, step: 0.1 };
+  function setBrush(v) {
+    v = Math.round(Math.min(S.max, Math.max(S.min, v)) / S.step) * S.step;
+    v = Math.round(v * 10) / 10;
+    brushSize = v;
+    const p = (v - S.min) / (S.max - S.min);
+    sliderCtl.style.setProperty('--position', `calc(var(--thumb) / 2 + ${p} * (100% - var(--thumb)))`);
+    sliderThumb.setAttribute('aria-valuenow', String(v));
+    sliderThumb.setAttribute('aria-valuetext', `${v.toFixed(1)}×`);
+  }
+  function brushFromPointer(e) {
+    const r = sliderCtl.getBoundingClientRect();
+    const thumb = sliderThumb.offsetWidth || 12;
+    const p = (e.clientX - r.left - thumb / 2) / Math.max(1, r.width - thumb);
+    setBrush(S.min + Math.min(1, Math.max(0, p)) * (S.max - S.min));
+  }
+  sliderCtl.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    sliderCtl.setPointerCapture(e.pointerId);
+    sliderCtl.dataset.dragging = '';
+    brushFromPointer(e);
+    sliderThumb.focus({ preventScroll: true });
+  });
+  sliderCtl.addEventListener('pointermove', (e) => {
+    if ('dragging' in sliderCtl.dataset) brushFromPointer(e);
+  });
+  const stopDrag = () => { delete sliderCtl.dataset.dragging; };
+  sliderCtl.addEventListener('pointerup', stopDrag);
+  sliderCtl.addEventListener('pointercancel', stopDrag);
+  sliderCtl.addEventListener('lostpointercapture', stopDrag);
+  sliderThumb.addEventListener('keydown', (e) => {
+    const big = (S.max - S.min) / 4;
+    const map = {
+      ArrowRight: S.step, ArrowUp: S.step, ArrowLeft: -S.step, ArrowDown: -S.step,
+      PageUp: big, PageDown: big
+    };
+    if (e.key in map) { e.preventDefault(); setBrush(brushSize + map[e.key]); }
+    else if (e.key === 'Home') { e.preventDefault(); setBrush(S.min); }
+    else if (e.key === 'End') { e.preventDefault(); setBrush(S.max); }
+  });
+  setBrush(1);
+  syncUI();
+
+  // ---------- optional: expose a tool to page-embedding agents ----------
+  const mc = document.modelContext;
+  if (mc && typeof mc.registerTool === 'function') {
+    const tool = {
+      name: 'draw_web_stroke',
+      description: 'Weave a silk stroke using 2 to 500 normalized canvas points between 0 and 1. Replaces the initial sample on first use.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          points: {
+            type: 'array', minItems: 2, maxItems: 500,
+            items: {
+              type: 'object',
+              properties: { x: { type: 'number', minimum: 0, maximum: 1 }, y: { type: 'number', minimum: 0, maximum: 1 } },
+              required: ['x', 'y'], additionalProperties: false
+            }
+          }
+        },
+        required: ['points'], additionalProperties: false
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      execute(input) {
+        const pts = input?.points;
+        if (!Array.isArray(pts) || pts.length < 2 || pts.length > 500 ||
+          pts.some((p) => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1)) {
+          throw new Error('Provide 2–500 points with x and y between 0 and 1.');
+        }
+        if (active) throw new Error('Finish the current stroke first.');
+        const stroke = beginStroke();
+        for (const p of pts) addPoint({ x: p.x * size.w, y: p.y * size.h }, true);
+        endStroke();
+        syncUI();
+        requestFrame();
+        return { strokes: strokes.length, points: stroke.points.length };
+      }
+    };
+    try { Promise.resolve(mc.registerTool(tool)).catch(() => {}); } catch { /* ignore */ }
+  }
+})();
+</script>
+</body>
+</html>

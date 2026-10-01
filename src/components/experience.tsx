@@ -1,14 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CalendarIcon } from "lucide-react";
+import { ArrowUpRight, CalendarIcon } from "lucide-react";
 import { SectionTitle } from "./section-title";
-import { DrawablyBadge, DrawablyCard, DrawablyList } from "./drawably";
+import { DrawablyBadge, DrawablyCard, DrawablyLink, DrawablyList } from "./drawably";
 
 // Edit this array to add, remove, or update experiences
 const experiences = [
   {
     company: "Hustle AI",
+    url: "https://hustleapp.co/",
     role: "AI Full-Stack Developer",
     type: "Remote",
     period: "Freelance",
@@ -23,6 +24,7 @@ const experiences = [
   },
   {
     company: "Mini Mic Pro",
+    url: "https://minimicpro.com/",
     role: "AI Developer",
     type: "Remote",
     period: "Freelance",
@@ -77,6 +79,20 @@ export function Experience() {
                   </li>
                 )}
               </DrawablyList>
+
+              {exp.url && (
+                <div className="mt-4 flex font-pen text-base">
+                  <DrawablyLink
+                    href={exp.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="gap-1 px-3 py-1 text-ink"
+                    width={1.5}
+                  >
+                    live <ArrowUpRight className="h-3.5 w-3.5" />
+                  </DrawablyLink>
+                </div>
+              )}
             </DrawablyCard>
           </motion.div>
         ))}

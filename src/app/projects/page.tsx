@@ -23,7 +23,7 @@ export default function ProjectsPage() {
         </p>
 
         <div className="mt-12">
-          <Projects title="All of them" />
+          <Projects />
         </div>
       </div>
       <Footer />

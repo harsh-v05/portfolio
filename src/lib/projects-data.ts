@@ -36,12 +36,4 @@ export const allProjects: Project[] = [
     liveLink: "/web-brush.html",
     image: "/WebBrush.png",
   },
-  {
-    id: 2,
-    name: "QuillPDF",
-    description:
-      "A fast and intuitive web application designed to chat with, analyze, and extract insights from PDF documents using AI.",
-    tags: ["Next.js", "TypeScript", "Tailwind CSS", "OpenAI", "Prisma"],
-    image: "/QuillPDF.png",
-  },
 ];

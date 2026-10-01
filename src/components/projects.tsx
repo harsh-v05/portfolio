@@ -11,7 +11,7 @@ interface ProjectsProps {
   title?: string;
 }
 
-export function Projects({ projects = allProjects, title = "Things I've built" }: ProjectsProps) {
+export function Projects({ projects = allProjects, title = "Fun Projects" }: ProjectsProps) {
   return (
     <section id="projects">
       <SectionTitle title={title} />
